@@ -1,0 +1,40 @@
+[project]
+name = "stampli_hs"
+version = "0.1.0"
+description = "home assignement from Stampli"
+authors = [
+    { name = "Matthias Elbaz", email = "matthias.elbaz91@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "superlinked",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "seaborn",
+    "jupyter",
+    "scipy>=1.16.0",
+    "statsmodels>=0.14.5",
+    "scikit-learn>=1.7.1",
+    "plotly>=6.2.0",
+    "ipywidgets>=8.0.0",
+    "jupyterlab>=4.0.0",
+    "xgboost>=1.6.0",
+    "langchain-core>=0.2.0",
+    "langchain>=0.2.0",
+    "langgraph>=0.2.0",
+    "langchain-community>=0.2.0",
+    "langchain-openai>=0.2.0",
+    "langchain-google-genai>=0.2.0",
+    "langchain-chroma>=0.1.2",
+    "langchain-text-splitters>=0.2.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.11.7",
+    "tqdm>=4.65.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+
+

@@ -1,0 +1,161 @@
+---
+alwaysApply: false
+---
+# MCP Server Usage Guide - FastAPI/SQLModel Edition
+
+## Available MCP Servers
+
+### 1. Context7 - Library Documentation
+**Purpose**: Get up-to-date documentation for any programming library or framework
+**When to use**: Code implementation, API usage, configuration, setup instructions
+
+### 2. LangGraph/LangChain Documentation  
+**Purpose**: Access official LangGraph and LangChain documentation
+**When to use**: AI agent development, graph-based workflows, LangChain integrations
+
+## Context7 Usage Patterns
+
+### Automatic Invocation
+For ANY question involving:
+- API endpoint implementation
+- Database model definitions
+- Authentication and authorization
+- Dependency injection patterns
+- Testing strategies
+
+**Examples**:
+```
+"How do I set up authentication with FastAPI?"
+"Show me SQLModel relationship examples"
+"Configure PostgreSQL connection with SQLAlchemy"
+"Implement JWT token validation"
+```
+
+### Direct Library Targeting
+When you know the specific library, use Context7 ID format:
+```
+"Implement API endpoints with /tiangolo/fastapi"
+"Set up database models with /tiangolo/sqlmodel" 
+"Add authentication with /fastapi-users/fastapi-users"
+"Configure async database with /sqlalchemy/sqlalchemy"
+```
+
+### Available Tools
+- `resolve-library-id`: Find Context7-compatible library ID
+- `get-library-docs`: Fetch documentation with optional topic focus
+
+## LangGraph/LangChain Usage
+
+### Required Workflow
+For ANY LangGraph or LangChain question, ALWAYS:
+
+1. Call `list_doc_sources` to get available documentation
+2. Call `fetch_docs` to read the main llms.txt file
+3. Analyze URLs and match them to the user's question
+4. Call `fetch_docs` on relevant URLs to get specific documentation
+5. Use this information to provide accurate, up-to-date answers
+
+### When to Use
+- Building AI agents or workflows
+- Graph-based processing patterns  
+- LangChain integrations
+- State management in AI applications
+- Multi-step reasoning systems
+
+**Examples**:
+```
+"How do I create a LangGraph workflow?"
+"What are LangChain's memory options?"
+"Build a multi-agent system"
+```
+
+## Best Practices
+
+### Context7
+- Include library versions when relevant
+- Use topic parameter to focus docs: `topic: "authentication"`, `topic: "relationships"`, `topic: "async"`
+- Reference official examples from retrieved docs
+- Verify current API patterns vs older tutorials
+- Focus on async/await patterns for FastAPI
+- Emphasize type hints and Pydantic models
+
+### LangGraph/LangChain  
+- Always fetch latest docs (don't rely on training data)
+- Cross-reference multiple doc sections for complex features
+- Include proper imports and setup in code examples
+- Mention version compatibility when relevant
+
+## Integration Examples
+
+### FastAPI Backend with Database
+```
+"Build user authentication API with /tiangolo/fastapi and /tiangolo/sqlmodel"
+```
+
+### AI Agent with FastAPI
+```
+"Create a LangGraph agent with FastAPI endpoints using LangChain"
+→ Triggers LangGraph docs workflow automatically
+```
+
+### Payment API Integration
+```
+"Integrate /stripe/stripe payments in /tiangolo/fastapi backend"
+```
+
+### Database Operations
+```
+"Implement CRUD operations with /tiangolo/sqlmodel and /sqlalchemy/sqlalchemy"
+```
+
+### Testing Setup
+```
+"Set up testing with /pytest-dev/pytest and /tiangolo/fastapi TestClient"
+```
+
+## FastAPI/SQLModel Specific Patterns
+
+### Common Library Combinations
+- **FastAPI + SQLModel + Alembic**: Full-stack backend with migrations
+- **FastAPI + Pydantic + SQLAlchemy**: Type-safe API with ORM
+- **FastAPI + Redis + Celery**: Background task processing
+- **FastAPI + PostgreSQL + asyncpg**: Async database operations
+
+### Key Documentation Areas
+- **FastAPI**: Path operations, dependency injection, middleware, background tasks
+- **SQLModel**: Model definitions, relationships, queries, migrations
+- **Pydantic**: Data validation, serialization, custom validators
+- **SQLAlchemy**: Advanced queries, sessions, connection pooling
+
+## Error Handling
+
+### Context7 Issues
+- Try `uv` instead of `pip` for modern Python package management
+- Use `python -m` prefix for module execution issues
+- Check virtual environment activation for import errors
+
+### LangGraph/LangChain Issues  
+- Ensure `uvx` is available for mcpdoc
+- Check internet connectivity for doc fetching
+- Verify URLs in llms.txt are accessible
+
+### FastAPI/SQLModel Common Issues
+- Async/sync mixing problems
+- SQLAlchemy session management
+- Pydantic model vs SQLModel conflicts
+- Import circular dependencies
+
+## Rule Activation
+
+This rule is triggered by:
+- FastAPI endpoint implementation questions
+- SQLModel/SQLAlchemy database queries
+- API authentication and authorization
+- Backend service architecture
+- Database migration and schema design
+- Python async/await patterns
+- API testing and validation
+- LangGraph/LangChain specific queries
+- Integration with external services
+
+The MCP tools will be invoked automatically based on context without requiring explicit tool calls in prompts.
