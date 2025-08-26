@@ -10,11 +10,8 @@ Based on official Superlinked documentation and examples.
 """
 
 import os
-import asyncio
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import List, Optional, Any, Dict
-from pathlib import Path
+from typing import List, Any
 
 # Superlinked imports - Fixed based on documentation
 from superlinked import framework as sl
