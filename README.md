@@ -1,350 +1,93 @@
-# Disney Review Analyzer 🏰
+# Stampli Home Assignment 🏰
 
-A comprehensive LangChain-powered tool for analyzing Disney theme park reviews with structured output and batch processing capabilities. Designed to process large datasets (40k+ reviews) efficiently while extracting detailed insights across multiple dimensions.
+A data analysis project for Disneyland reviews using LLM-powered feature extraction and RAG-based querying.
 
-## Features ✨
+## Project Overview
 
-### 🎯 Comprehensive Analysis Dimensions
+This project analyzes Disneyland review data through:
+1. **Exploratory Data Analysis (EDA)** - Understanding rating patterns, visitor demographics, and temporal trends
+2. **LLM Feature Extraction** - Using GPT-4o-mini to extract structured insights from review text
+3. **RAG System** - Combining Superlinked embeddings with LangChain for natural language querying
 
-1. **Overall Sentiment Analysis**
-   - Positive, negative, neutral classification
-   - Confidence scoring
+## Setup
 
-2. **Aspect-Based Sentiment** 
-   - Attractions/rides
-   - Food & restaurants
-   - Hotels & resorts
-   - Staff friendliness
-   - Price & value for money
-   - Crowd management & waiting times
-   - Cleanliness & safety
-   - Accessibility (mobility, languages, dietary needs)
+### 1. Install Dependencies with UV
 
-3. **Visitor Demographics** (inferred from text)
-   - Families, couples, solo travelers, groups
-   - International vs. local visitors
-   - Presence of children
-
-4. **Trip Context**
-   - First-time visit, returning guest, frequent visitor
-   - Special events (birthday, honeymoon, holidays)
-   - Trip duration
-
-5. **Time Dimension**
-   - Season/month of visit
-   - Day type (weekday/weekend/holiday)
-
-6. **Purchase Mentions**
-   - Tickets, fast passes, souvenirs, food, hotels, parking
-
-7. **Engagement Signals**
-   - Time spent, popular attractions mentioned
-   - Intent to return or recommend
-
-8. **Pain Points**
-   - Journey stage where issues occurred
-   - Severity assessment
-
-### 🚀 Technical Features
-
-- **Structured Output**: Pydantic models ensure consistent, validated results
-- **Batch Processing**: LangChain batch API for efficient processing
-- **Parallel Processing**: Multi-threaded execution for large datasets
-- **Error Handling**: Retry logic and graceful failure handling
-- **Progress Tracking**: Real-time progress monitoring with tqdm
-- **Memory Efficient**: Processes data in configurable batches
-- **Multiple LLM Support**: OpenAI, Google AI, and extensible to others
-
-## Installation 📦
-
-1. **Clone or download the files to your project directory**
-
-2. **Install dependencies:**
 ```bash
-pip install -r requirements.txt
+# Install uv package manager if not already installed
+pip install uv
+
+# Sync dependencies from pyproject.toml
+uv sync
 ```
 
-3. **Set up environment variables:**
+### 2. Environment Variables
+
+Create a `.env` file from the example:
 ```bash
-# Copy the example environment file
 cp env_example.txt .env
+```
 
-# Edit .env with your API keys
+Add your OpenAI API key:
+```
 OPENAI_API_KEY=your_openai_api_key_here
-# or
-GOOGLE_API_KEY=your_google_api_key_here
 ```
 
-## Quick Start 🚀
+## Data
 
-### Option 1: Demo with Sample Reviews
+The project uses two main datasets in `disney-reviews/`:
 
-```python
-from disney_review_analyzer import DisneyReviewAnalyzer
+- **`DisneylandReviews.csv`** (31MB) - Original dataset with 42k+ reviews from 2010-2019
+- **`disney_reviews_fr_analysis.csv`** (255KB) - Pre-processed French reviews with LLM-extracted features
 
-# Initialize analyzer
-analyzer = DisneyReviewAnalyzer(
-    model_provider="openai",
-    model_name="gpt-4o-mini",
-    batch_size=10,
-    max_workers=4
-)
+### Dataset Features
 
-# Sample reviews
-reviews = [
-    "Amazing experience! The rides were fantastic and staff was very friendly...",
-    "Too crowded and overpriced. Food was terrible but kids loved the parade..."
-]
+**Original columns:**
+- Review_ID, Rating, Reviewer_Location, Review_Text, Branch, Year_Month
 
-# Analyze reviews
-results = analyzer.process_reviews_parallel(reviews)
+**LLM-extracted features (41 total columns):**
+- Sentiment analysis (overall + aspect-based for attractions, food, staff, etc.)
+- Visitor demographics (type, origin, children presence)
+- Trip context (frequency, duration, special occasions)
+- Purchase mentions (tickets, fast passes, souvenirs)
+- Engagement signals (attractions mentioned, recommendation intent)
 
-# View results
-for i, result in enumerate(results):
-    if result:
-        print(f"Review {i+1}: {result.overall_sentiment} "
-              f"(confidence: {result.sentiment_confidence:.2f})")
-```
+## Running the Notebook
 
-### Option 2: Analyze Your CSV Dataset
+Open and run `stampli_hs.ipynb` sequentially. 
 
-```python
-from disney_review_analyzer import DisneyReviewAnalyzer
+### ⚠️ Important - Do NOT Run Cell 38
 
-# Initialize analyzer
-analyzer = DisneyReviewAnalyzer(
-    model_provider="openai",
-    model_name="gpt-4o-mini",
-    batch_size=20,  # Adjust based on your API limits
-    max_workers=6   # Adjust based on your system
-)
+**Cell 38 contains the LLM feature extraction code that:**
+- Processes reviews through OpenAI's GPT-4o-mini
+- Takes hours to complete for large datasets
+- Consumes significant API tokens
+- **Results are already saved in `disney_reviews_fr_analysis.csv`**
 
-# Process CSV file
-results_df = analyzer.analyze_csv_file(
-    csv_path="path/to/your/reviews.csv",
-    review_column="Review_Text",  # Adjust column name
-    output_path="analysis_results.csv"
-)
+### Notebook Structure
 
-# Generate summary report
-report = analyzer.generate_summary_report(results_df)
-print(f"Analyzed {report['overview']['successful_analyses']} reviews")
-print(f"Sentiment distribution: {report['sentiment_distribution']}")
-```
+1. **Cells 1-37**: EDA and setup (safe to run)
+2. **Cell 38**: ❌ **DO NOT RUN** - LLM extraction (pre-computed)
+3. **Cells 39-56**: Analysis with pre-processed data (safe to run)
 
-### Option 3: Using the Example Script
+### Key Sections
 
-```bash
-python example_usage.py
-```
+- **EDA (Cells 1-35)**: Rating distributions, temporal patterns, location analysis
+- **Feature Extraction (Cells 36-39)**: LLM pipeline description (don't run cell 38)
+- **Advanced Analysis (Cells 40-51)**: Working with extracted features
+- **RAG System (Cells 52-56)**: Natural language querying with Superlinked + LangChain
 
-Choose option 1 for a quick demo or option 2 to analyze your full dataset.
+## Technologies Used
 
-## Configuration ⚙️
+- **pandas/matplotlib/seaborn** - Data analysis and visualization
+- **LangChain + OpenAI** - LLM-powered feature extraction
+- **Superlinked** - Mixed-type embeddings and semantic search
+- **UV** - Modern Python dependency management
 
-### LLM Providers
+## Key Insights
 
-**OpenAI (Recommended)**
-```python
-analyzer = DisneyReviewAnalyzer(
-    model_provider="openai",
-    model_name="gpt-4o-mini",  # Cost-effective
-    # model_name="gpt-4o",     # Higher quality
-)
-```
-
-**Google AI**
-```python
-analyzer = DisneyReviewAnalyzer(
-    model_provider="google",
-    model_name="gemini-1.5-flash",  # Fast and cost-effective
-    # model_name="gemini-1.5-pro",   # Higher quality
-)
-```
-
-### Performance Tuning
-
-```python
-analyzer = DisneyReviewAnalyzer(
-    batch_size=50,      # Larger batches = faster, but more memory
-    max_workers=8,      # More workers = faster, but more API usage
-    max_retries=3,      # Retry failed requests
-    temperature=0.1     # Lower = more consistent results
-)
-```
-
-## Data Schema 📊
-
-The analyzer produces structured output with the following main categories:
-
-### Core Results
-- `overall_sentiment`: positive/negative/neutral
-- `sentiment_confidence`: 0.0 to 1.0
-
-### Aspect Sentiments
-- `attractions_sentiment`: Sentiment about rides/attractions
-- `food_sentiment`: Sentiment about food and restaurants
-- `staff_sentiment`: Sentiment about staff interactions
-- `price_sentiment`: Sentiment about value for money
-- ... (8 total aspects)
-
-### Visitor Insights
-- `visitor_type`: families/couples/solo/group
-- `visitor_origin`: international/local
-- `visit_frequency`: first_time/returning/frequent
-
-### Behavioral Data
-- `mentions_fast_passes`: Boolean
-- `mentions_souvenirs`: Boolean
-- `popular_attractions`: List of mentioned attractions
-- `recommendation_intent`: yes/no/conditional
-
-### Pain Points
-- `main_complaint`: Primary issue mentioned
-- `journey_stage`: Where problems occurred
-- `pain_severity`: minor/moderate/major/trip_ruining
-
-## Performance & Costs 💰
-
-### Estimated Processing Times (40k reviews)
-
-| Configuration | Time | Cost (OpenAI gpt-4o-mini) |
-|---------------|------|---------------------------|
-| batch_size=10, workers=4 | ~6 hours | ~$40-60 |
-| batch_size=20, workers=6 | ~3 hours | ~$40-60 |
-| batch_size=50, workers=8 | ~2 hours | ~$40-60 |
-
-### Cost Optimization Tips
-
-1. **Use gpt-4o-mini**: 85% cheaper than GPT-4, excellent for structured tasks
-2. **Process samples first**: Test with 100-1000 reviews before full dataset
-3. **Batch processing**: Use larger batch sizes when possible
-4. **Monitor API limits**: Stay within rate limits to avoid delays
-
-## Example Output 📋
-
-```json
-{
-  "overall_sentiment": "positive",
-  "sentiment_confidence": 0.85,
-  "aspect_sentiments": {
-    "attractions_rides": "positive",
-    "food_restaurants": "negative", 
-    "staff_friendliness": "positive",
-    "price_value": "negative"
-  },
-  "visitor_demographics": {
-    "visitor_type": "families",
-    "has_children": true,
-    "visitor_origin": "international"
-  },
-  "trip_context": {
-    "visit_frequency": "first_time",
-    "special_occasion": "birthday",
-    "trip_duration": "weekend"
-  },
-  "engagement_signals": {
-    "popular_attractions": ["Space Mountain", "Pirates of the Caribbean"],
-    "recommendation_intent": "conditional"
-  },
-  "pain_points": {
-    "main_complaint": "Long wait times and expensive food",
-    "journey_stage": "during_visit",
-    "severity": "moderate"
-  }
-}
-```
-
-## Advanced Usage 🔧
-
-### Custom Processing Pipeline
-
-```python
-import pandas as pd
-from disney_review_analyzer import DisneyReviewAnalyzer
-
-def process_large_dataset(csv_path, chunk_size=1000):
-    """Process large datasets in chunks to manage memory."""
-    analyzer = DisneyReviewAnalyzer(batch_size=25, max_workers=6)
-    
-    all_results = []
-    
-    # Process in chunks
-    for chunk in pd.read_csv(csv_path, chunksize=chunk_size):
-        reviews = chunk['review_text'].tolist()
-        results = analyzer.process_reviews_parallel(reviews)
-        all_results.extend(results)
-        
-        print(f"Processed {len(all_results)} reviews...")
-    
-    return all_results
-```
-
-### Error Handling and Monitoring
-
-```python
-def analyze_with_monitoring(reviews):
-    analyzer = DisneyReviewAnalyzer()
-    
-    def progress_callback(completed_batches, total_batches):
-        progress = completed_batches / total_batches
-        print(f"Progress: {progress:.1%} ({completed_batches}/{total_batches} batches)")
-    
-    results = analyzer.process_reviews_parallel(
-        reviews, 
-        progress_callback=progress_callback
-    )
-    
-    # Check success rate
-    successful = sum(1 for r in results if r is not None)
-    print(f"Success rate: {successful/len(results):.1%}")
-    
-    return results
-```
-
-## Troubleshooting 🛠️
-
-### Common Issues
-
-1. **API Key Not Found**
-   ```bash
-   Error: OPENAI_API_KEY environment variable is required
-   ```
-   Solution: Set up your `.env` file with valid API keys
-
-2. **Rate Limit Errors**
-   ```
-   Rate limit exceeded
-   ```
-   Solution: Reduce `batch_size` and `max_workers`, or upgrade API plan
-
-3. **Memory Issues**
-   ```
-   Memory error processing large dataset
-   ```
-   Solution: Reduce `batch_size` or process data in chunks
-
-4. **Column Not Found**
-   ```
-   Column 'Review_Text' not found in CSV
-   ```
-   Solution: Check your CSV column names and specify the correct `review_column`
-
-### Performance Optimization
-
-- Start with small samples (100-1000 reviews) to test configuration
-- Monitor API usage and costs in your provider dashboard
-- Use `gpt-4o-mini` for cost-effective processing
-- Adjust batch size based on your API tier and rate limits
-
-## Contributing 🤝
-
-Feel free to submit issues, feature requests, or pull requests to improve the analyzer.
-
-## License 📄
-
-This project is open source. Please check the specific license file for details.
-
----
-
-**Happy Analyzing! 🎢✨** 
+- Rating distribution skews positive (most visitors happy)
+- European visitors tend to rate more critically than North Americans
+- Disneyland Paris receives lower ratings than California/Hong Kong
+- Long reviews correlate with negative sentiment
+- LLM extraction enables rich analysis of unstructured text data 

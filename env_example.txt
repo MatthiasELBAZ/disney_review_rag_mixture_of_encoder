@@ -3,28 +3,3 @@
 
 # OpenAI API Configuration (Recommended for structured output)
 OPENAI_API_KEY=your_openai_api_key_here
-# OPENAI_ORGANIZATION=your_organization_id  # Optional
-
-# Google AI API Configuration (Alternative)
-GOOGLE_API_KEY=your_google_api_key_here
-
-# Anthropic API Configuration (Optional)
-# ANTHROPIC_API_KEY=your_anthropic_api_key_here
-
-# Application Configuration
-# LOG_LEVEL=INFO
-# MAX_WORKERS=4
-# BATCH_SIZE=20
-# DEFAULT_MODEL_PROVIDER=openai
-# DEFAULT_MODEL_NAME=gpt-4o-mini
-
-# Instructions:
-# 1. Copy this file to .env
-# 2. Replace the placeholder values with your actual API keys
-# 3. Uncomment and configure optional settings as needed
-# 4. Never commit the .env file to version control
-
-# API Key Sources:
-# OpenAI: https://platform.openai.com/api-keys
-# Google AI: https://aistudio.google.com/app/apikey
-# Anthropic: https://console.anthropic.com/ 

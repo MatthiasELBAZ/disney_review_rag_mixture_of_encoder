@@ -115,6 +115,118 @@ class DisneyReviewRAG:
             temperature=0.0,
             api_key=os.getenv("OPENAI_API_KEY")
         )
+        
+        # Setup OpenAI configuration for natural language querying
+        self._setup_openai_config()
+        
+        # Create natural language query (will be set up after _create_query)
+        self._create_natural_language_query()
+    
+    def _setup_openai_config(self):
+        """Setup OpenAI configuration for natural language querying."""
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            print("⚠️  OPENAI_API_KEY not found. Natural language querying will be disabled.")
+            self.openai_config = None
+        else:
+            self.openai_config = sl.OpenAIClientConfig(
+                api_key=api_key, 
+                model="gpt-4o"
+            )
+            print("✅ OpenAI configuration set up for natural language querying")
+    
+    def _create_natural_language_query(self):
+        """Create a natural language query version of the Disney query."""
+        if self.openai_config is None:
+            print("⚠️  OpenAI configuration not available. Skipping natural language query setup.")
+            self.disney_nlq_query = None
+            return
+        
+        # Create enhanced query with natural language support and parameter descriptions
+        self.disney_nlq_query = (
+            sl.Query(self.disney_index, weights=self.weights)
+            .find(self.disney_review)
+            .similar(
+                self.text_space.text, 
+                sl.Param(
+                    "query_text",
+                    description="Main text content from the user's question about Disney reviews, attractions, experiences, or specific aspects like food, staff, pricing, etc."
+                )
+            )
+            .filter(
+                self.disney_review.overall_sentiment == sl.Param(
+                    "sentiment_filter",
+                    description="Filter reviews by overall sentiment: positive, negative, or neutral",
+                    options=["positive", "negative", "neutral"]
+                )
+            )
+            .filter(
+                self.disney_review.visitor_type == sl.Param(
+                    "visitor_type_filter",
+                    description="Filter by type of visitors: families, couples, solo, group, or unknown",
+                    options=["families", "couples", "solo", "group", "unknown"]
+                )
+            )
+            .filter(
+                self.disney_review.visit_frequency == sl.Param(
+                    "visit_frequency_filter",
+                    description="Filter by visit frequency: first_time, returning, frequent, or unknown",
+                    options=["first_time", "returning", "frequent", "unknown"]
+                )
+            )
+            .filter(
+                self.disney_review.attractions_sentiment == sl.Param(
+                    "attractions_filter",
+                    description="Filter by sentiment about attractions: positive, negative, neutral, or not_mentioned",
+                    options=["positive", "negative", "neutral", "not_mentioned"]
+                )
+            )
+            .filter(
+                self.disney_review.recommendation_intent == sl.Param(
+                    "recommendation_filter",
+                    description="Filter by recommendation intent: yes, no, conditional, or unknown",
+                    options=["yes", "no", "conditional", "unknown"]
+                )
+            )
+            .filter(
+                self.disney_review.season == sl.Param(
+                    "season_filter",
+                    description="Filter by season of visit: spring, summer, fall, winter, or unknown",
+                    options=["spring", "summer", "fall", "winter", "unknown"]
+                )
+            )
+            .filter(
+                self.disney_review.month == sl.Param(
+                    "month_filter",
+                    description="Filter by month of visit",
+                    options=["January", "February", "March", "April", "May", "June",
+                           "July", "August", "September", "October", "November", "December"]
+                )
+            )
+            .select([
+                self.disney_review.review_text,
+                self.disney_review.overall_sentiment,
+                self.disney_review.sentiment_confidence,
+                self.disney_review.attractions_sentiment,
+                self.disney_review.food_sentiment,
+                self.disney_review.staff_sentiment,
+                self.disney_review.price_sentiment,
+                self.disney_review.visitor_type,
+                self.disney_review.visit_frequency,
+                self.disney_review.recommendation_intent,
+                self.disney_review.main_complaint,
+                self.disney_review.popular_attractions,
+                self.disney_review.satisfaction_score,
+                self.disney_review.rating,
+                self.disney_review.season,
+                self.disney_review.month,
+                self.disney_review.has_children,
+                self.disney_review.repeat_visits
+            ])
+            .limit(sl.Param("limit", description="Maximum number of reviews to return", default=20))
+            .with_natural_query(sl.Param("natural_query"), self.openai_config)
+        )
+        print("✅ Natural language query created successfully")
     
     def _create_vector_spaces(self):
         """Create specialized vector spaces for Disney review features."""
@@ -524,9 +636,52 @@ class DisneyReviewRetriever(BaseRetriever):
     
     sl_client: Any = Field(...)
     disney_query: Any = Field(...)
+    disney_nlq_query: Any = Field(default=None)
     
     def _get_relevant_documents(self, query: str, **kwargs: Any) -> List[Document]:
-        """Retrieve relevant Disney review documents."""
+        """Retrieve relevant Disney review documents using traditional or natural language queries."""
+        
+        # Check if natural language querying is requested and available
+        use_natural_language = kwargs.get("use_natural_language", False) and self.disney_nlq_query is not None
+        
+        if use_natural_language:
+            return self._get_documents_with_nlq(query, **kwargs)
+        else:
+            return self._get_documents_traditional(query, **kwargs)
+    
+    def _get_documents_with_nlq(self, query: str, **kwargs: Any) -> List[Document]:
+        """Retrieve documents using natural language query."""
+        
+        # Simple parameters for natural language query
+        query_params = {
+            "natural_query": query,
+            "limit": kwargs.get("limit", 20)
+        }
+        
+        # Allow override of specific parameters if provided
+        if "sentiment_filter" in kwargs:
+            query_params["sentiment_filter"] = kwargs["sentiment_filter"]
+        if "visitor_type_filter" in kwargs:
+            query_params["visitor_type_filter"] = kwargs["visitor_type_filter"]
+        if "season_filter" in kwargs:
+            query_params["season_filter"] = kwargs["season_filter"]
+        
+        try:
+            results = self.sl_client.query(
+                self.disney_nlq_query,
+                **query_params
+            )
+            
+            return self._process_results(results)
+        
+        except Exception as e:
+            print(f"Error executing Disney natural language query: {e}")
+            # Fallback to traditional query
+            print("Falling back to traditional parameterized query...")
+            return self._get_documents_traditional(query, **kwargs)
+    
+    def _get_documents_traditional(self, query: str, **kwargs: Any) -> List[Document]:
+        """Retrieve documents using traditional parameterized query."""
         
         # Default query parameters optimized for Disney reviews
         query_params = {
@@ -560,7 +715,7 @@ class DisneyReviewRetriever(BaseRetriever):
             # Pain points
             "pain_weight": kwargs.get("pain_weight", 0.6),
             
-            "limit": kwargs.get("limit", 5),
+            "limit": kwargs.get("limit", 20),
             
             # Optional filters - set to None if not specified
             "sentiment_filter": kwargs.get("sentiment_filter"),
@@ -576,47 +731,51 @@ class DisneyReviewRetriever(BaseRetriever):
                 **query_params
             )
             
-            documents = []
-            for entry in results.entries:
-                try:
-                    fields = entry.fields or {}
-                    
-                    if fields.get("review_text"):
-                        doc_content = fields["review_text"]
-                        
-                        # Create rich metadata
-                        metadata = {
-                            "review_id": getattr(entry, 'id', 'unknown'),
-                            "overall_sentiment": fields.get("overall_sentiment", "unknown"),
-                            "sentiment_confidence": fields.get("sentiment_confidence", 0.0),
-                            "attractions_sentiment": fields.get("attractions_sentiment", "not_mentioned"),
-                            "food_sentiment": fields.get("food_sentiment", "not_mentioned"),
-                            "staff_sentiment": fields.get("staff_sentiment", "not_mentioned"),
-                            "price_sentiment": fields.get("price_sentiment", "not_mentioned"),
-                            "visitor_type": fields.get("visitor_type", "unknown"),
-                            "visit_frequency": fields.get("visit_frequency", "unknown"),
-                            "recommendation_intent": fields.get("recommendation_intent", "unknown"),
-                            "main_complaint": fields.get("main_complaint", ""),
-                            "popular_attractions": fields.get("popular_attractions", ""),
-                            "satisfaction_score": fields.get("satisfaction_score", 0.0),
-                            "rating": fields.get("rating", 0),
-                            "season": fields.get("season", "unknown"),
-                            "month": fields.get("month", "unknown"),
-                            "has_children": fields.get("has_children", "False"),
-                            "repeat_visits": fields.get("repeat_visits", "False")
-                        }
-                        
-                        documents.append(Document(page_content=doc_content, metadata=metadata))
-                
-                except Exception as e:
-                    print(f"Error processing entry: {e}")
-                    continue
-            
-            return documents
+            return self._process_results(results)
         
         except Exception as e:
             print(f"Error executing Disney review query: {e}")
             return []
+    
+    def _process_results(self, results) -> List[Document]:
+        """Process Superlinked results into LangChain Document format."""
+        documents = []
+        for entry in results.entries:
+            try:
+                fields = entry.fields or {}
+                
+                if fields.get("review_text"):
+                    doc_content = fields["review_text"]
+                    
+                    # Create rich metadata
+                    metadata = {
+                        "review_id": getattr(entry, 'id', 'unknown'),
+                        "overall_sentiment": fields.get("overall_sentiment", "unknown"),
+                        "sentiment_confidence": fields.get("sentiment_confidence", 0.0),
+                        "attractions_sentiment": fields.get("attractions_sentiment", "not_mentioned"),
+                        "food_sentiment": fields.get("food_sentiment", "not_mentioned"),
+                        "staff_sentiment": fields.get("staff_sentiment", "not_mentioned"),
+                        "price_sentiment": fields.get("price_sentiment", "not_mentioned"),
+                        "visitor_type": fields.get("visitor_type", "unknown"),
+                        "visit_frequency": fields.get("visit_frequency", "unknown"),
+                        "recommendation_intent": fields.get("recommendation_intent", "unknown"),
+                        "main_complaint": fields.get("main_complaint", ""),
+                        "popular_attractions": fields.get("popular_attractions", ""),
+                        "satisfaction_score": fields.get("satisfaction_score", 0.0),
+                        "rating": fields.get("rating", 0),
+                        "season": fields.get("season", "unknown"),
+                        "month": fields.get("month", "unknown"),
+                        "has_children": fields.get("has_children", "False"),
+                        "repeat_visits": fields.get("repeat_visits", "False")
+                    }
+                    
+                    documents.append(Document(page_content=doc_content, metadata=metadata))
+            
+            except Exception as e:
+                print(f"Error processing entry: {e}")
+                continue
+        
+        return documents
 
 
 def create_disney_rag_system(analyzed_df: pd.DataFrame) -> RetrievalQA:
@@ -640,10 +799,11 @@ def create_disney_rag_system(analyzed_df: pd.DataFrame) -> RetrievalQA:
     indexed_count = disney_rag.index_data(analyzed_df)
     print(f"✅ Disney RAG system ready with {indexed_count} reviews")
     
-    # Create retriever
+    # Create retriever with both traditional and natural language query support
     retriever = DisneyReviewRetriever(
         sl_client=app,
-        disney_query=disney_rag.disney_query
+        disney_query=disney_rag.disney_query,
+        disney_nlq_query=disney_rag.disney_nlq_query
     )
     
     # Create QA chain
@@ -660,93 +820,127 @@ def create_disney_rag_system(analyzed_df: pd.DataFrame) -> RetrievalQA:
     return qa_chain
 
 
+def create_disney_rag_system_with_nlq(analyzed_df: pd.DataFrame) -> tuple[RetrievalQA, Any]:
+    """
+    Create a Disney Review RAG system with natural language query support.
+    
+    Args:
+        analyzed_df: DataFrame with analyzed Disney review data
+        
+    Returns:
+        Tuple of (RetrievalQA chain, Superlinked app) for direct querying
+    """
+    
+    # Initialize RAG system
+    disney_rag = DisneyReviewRAG()
+    
+    # Setup Superlinked components
+    app = disney_rag.setup_superlinked()
+    
+    # Index the data
+    indexed_count = disney_rag.index_data(analyzed_df)
+    print(f"✅ Disney RAG system ready with {indexed_count} reviews")
+    
+    # Create retriever with natural language query support
+    retriever = DisneyReviewRetriever(
+        sl_client=app,
+        disney_query=disney_rag.disney_query,
+        disney_nlq_query=disney_rag.disney_nlq_query
+    )
+    
+    # Create QA chain
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=disney_rag.llm,
+        chain_type="stuff",
+        retriever=retriever,
+        return_source_documents=True,
+        chain_type_kwargs={
+            "prompt": create_disney_qa_prompt()
+        }
+    )
+    
+    return qa_chain, app
+
+
+def query_disney_with_natural_language(
+    app, 
+    disney_nlq_query, 
+    natural_query: str, 
+    limit: int = 20, 
+    **override_params
+) -> dict:
+    """
+    Query Disney reviews using natural language directly with Superlinked.
+    
+    Args:
+        app: Superlinked app instance
+        disney_nlq_query: Natural language query object
+        natural_query: Natural language query string
+        limit: Maximum number of results to return
+        **override_params: Optional parameter overrides (e.g., sentiment_filter="positive")
+        
+    Returns:
+        Dictionary with results and metadata
+    """
+    
+    if disney_nlq_query is None:
+        raise ValueError("Natural language querying not available. Check OpenAI API key configuration.")
+    
+    # Build query parameters
+    query_params = {
+        "natural_query": natural_query,
+        "limit": limit,
+        **override_params
+    }
+    
+    try:
+        # Execute the natural language query
+        result = app.query(disney_nlq_query, **query_params)
+        
+        # Convert to pandas for easier viewing
+        df_result = sl.PandasConverter.to_pandas(result)
+        
+        return {
+            "results": df_result,
+            "metadata": result.metadata,
+            "extracted_params": result.metadata.search_params if hasattr(result.metadata, 'search_params') else {},
+            "num_results": len(df_result)
+        }
+        
+    except Exception as e:
+        print(f"Error executing natural language query: {e}")
+        return {
+            "results": None,
+            "metadata": None,
+            "extracted_params": {},
+            "num_results": 0,
+            "error": str(e)
+        }
+
+
 def create_disney_qa_prompt():
     """Create a specialized prompt for Disney review Q&A."""
     
     template = """You are an expert Disney theme park analyst. Use the following Disney review excerpts to answer questions about visitor experiences, sentiment, and insights.
+    Context from Disney Reviews:
+    {context}
+    Question: {question}
 
-Context from Disney Reviews:
-{context}
+    Please provide a comprehensive answer based on the review data. Include specific insights about:
+    - Overall sentiment patterns
+    - Visitor demographics when relevant  
+    - Specific aspects mentioned (attractions, food, staff, pricing, etc.)
+    - Common pain points or positive highlights
+    - Recommendations based on the data
 
-Question: {question}
+    If the question asks for trends or patterns, analyze across multiple reviews.
+    If asking about specific experiences, focus on relevant review details.
 
-Please provide a comprehensive answer based on the review data. Include specific insights about:
-- Overall sentiment patterns
-- Visitor demographics when relevant  
-- Specific aspects mentioned (attractions, food, staff, pricing, etc.)
-- Common pain points or positive highlights
-- Recommendations based on the data
-
-If the question asks for trends or patterns, analyze across multiple reviews.
-If asking about specific experiences, focus on relevant review details.
-
-Answer:"""
+    Answer:"""
     
     return PromptTemplate(
         template=template,
         input_variables=["context", "question"]
     )
-
-
-# Example usage functions
-def example_disney_rag_workflow(analyzed_df: pd.DataFrame):
-    """
-    Example workflow for using the Disney RAG system with pre-analyzed data.
-    
-    Args:
-        analyzed_df: DataFrame with already analyzed Disney review data
-    """
-    
-    # Create the RAG system with pre-analyzed data
-    qa_chain = create_disney_rag_system(analyzed_df)
-    
-    # Ask questions about the Disney reviews
-    sample_questions = [
-        "What do families with children think about Disney attractions?",
-        "What are the main complaints about food at Disney parks?",
-        "How do first-time visitors rate their experience compared to returning visitors?",
-        "What attractions get mentioned most positively?",
-        "What pricing concerns do visitors have?",
-        "How satisfied are international visitors compared to local ones?"
-    ]
-    
-    print("Disney Review RAG System - Ready to answer questions!")
-    print("=" * 60)
-    
-    for question in sample_questions:
-        try:
-            result = qa_chain(question)
-            print(f"Q: {question}")
-            print(f"A: {result['result']}")
-            print(f"Sources: {len(result['source_documents'])} reviews")
-            print("-" * 60)
-        except Exception as e:
-            print(f"Error processing question '{question}': {e}")
-            print("-" * 60)
-
-
-def load_and_create_rag_system(csv_path: str) -> RetrievalQA:
-    """
-    Load pre-analyzed Disney review data and create RAG system.
-    
-    Args:
-        csv_path: Path to CSV file with analyzed Disney review data
-        
-    Returns:
-        RetrievalQA chain ready for questioning
-    """
-    
-    # Load pre-analyzed data
-    print(f"📊 Loading analyzed Disney review data from {csv_path}")
-    analyzed_df = pd.read_csv(csv_path)
-    
-    # Filter for successful analyses only
-    successful_df = analyzed_df[analyzed_df.get('analysis_successful', True) == True]
-    print(f"✅ Found {len(successful_df)} successfully analyzed reviews out of {len(analyzed_df)} total")
-    
-    # Create RAG system
-    qa_chain = create_disney_rag_system(successful_df)
-    
-    return qa_chain
 
 
